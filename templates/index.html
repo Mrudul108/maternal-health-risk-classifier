@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MaternaCare AI — Maternal Health Risk Level Classifier</title>
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-group">
+        <div class="brand-logo">
+          <i class="fa-solid fa-heart-pulse"></i>
+        </div>
+        <div class="brand-info">
+          <h1>MaternaCare <span>AI</span></h1>
+          <p class="brand-subtitle">Maternal Health Risk Classification • HDSSBL701 Mini-Project</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="model-badge">
+          <span class="pulse-dot"></span>
+          <span class="badge-text"><strong>{{ model_name }}</strong> Active • 86.2% Acc</span>
+        </div>
+        <!-- Single Header Action Button for Performance Measures (Key Requirement 1) -->
+        <button id="openPerfModalBtn" class="btn btn-header-perf">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Model Performance & Confusion Matrix</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Quick Context Banner -->
+  <div class="context-banner">
+    <div class="banner-inner">
+      <div class="context-tags">
+        <span class="tag"><i class="fa-solid fa-database"></i> UCI Repository #863</span>
+        <span class="tag"><i class="fa-solid fa-dna"></i> 6 Clinical Biomarkers</span>
+        <span class="tag"><i class="fa-solid fa-users"></i> 1,014 Evaluated Records</span>
+      </div>
+      <div class="preset-selector">
+        <span class="preset-label"><i class="fa-solid fa-bolt"></i> Quick Presets:</span>
+        <button type="button" class="preset-pill preset-low" data-preset="low">
+          <i class="fa-solid fa-circle-check"></i> Low Risk Sample
+        </button>
+        <button type="button" class="preset-pill preset-mid" data-preset="mid">
+          <i class="fa-solid fa-triangle-exclamation"></i> Mid Risk Sample
+        </button>
+        <button type="button" class="preset-pill preset-high" data-preset="high">
+          <i class="fa-solid fa-circle-radiation"></i> High Risk Sample
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Layout -->
+  <main class="main-container">
+    <div class="grid-layout">
+
+      <!-- Left Column: Patient Biomarkers Input Form -->
+      <section class="card input-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon"><i class="fa-solid fa-stethoscope"></i></div>
+            <div>
+              <h2>Patient Measurements</h2>
+              <p class="card-subtitle">Adjust sliders or enter numbers directly</p>
+            </div>
+          </div>
+          <button type="button" id="resetFormBtn" class="btn-icon-subtle" title="Reset all inputs">
+            <i class="fa-solid fa-arrow-rotate-left"></i> Reset
+          </button>
+        </div>
+
+        <form id="predictionForm" class="biomarkers-form">
+          <!-- 1. Age -->
+          <div class="form-group">
+            <div class="field-meta">
+              <label for="inputAge"><i class="fa-solid fa-user-clock"></i> Maternal Age</label>
+              <div class="field-badges">
+                <span class="unit-badge">years</span>
+                <span class="ref-badge">10 – 70</span>
+              </div>
+            </div>
+            <div class="input-slider-row">
+              <input type="range" class="slider" id="sliderAge" min="10" max="70" step="1" value="25">
+              <input type="number" class="num-input" id="inputAge" name="Age" min="10" max="80" step="1" value="25" required>
+            </div>
+          </div>
+
+          <!-- 2. Systolic Blood Pressure -->
+          <div class="form-group">
+            <div class="field-meta">
+              <label for="inputSystolicBP"><i class="fa-solid fa-heart"></i> Systolic BP (Upper)</label>
+              <div class="field-badges">
+                <span class="unit-badge">mmHg</span>
+                <span class="ref-badge">Normal: 90 – 120</span>
+              </div>
+            </div>
+            <div class="input-slider-row">
+              <input type="range" class="slider" id="sliderSystolicBP" min="70" max="180" step="1" value="120">
+              <input type="number" class="num-input" id="inputSystolicBP" name="SystolicBP" min="70" max="220" step="1" value="120" required>
+            </div>
+          </div>
+
+          <!-- 3. Diastolic Blood Pressure -->
+          <div class="form-group">
+            <div class="field-meta">
+              <label for="inputDiastolicBP"><i class="fa-solid fa-heart"></i> Diastolic BP (Lower)</label>
+              <div class="field-badges">
+                <span class="unit-badge">mmHg</span>
+                <span class="ref-badge">Normal: 60 – 80</span>
+              </div>
+            </div>
+            <div class="input-slider-row">
+              <input type="range" class="slider" id="sliderDiastolicBP" min="45" max="130" step="1" value="80">
+              <input type="number" class="num-input" id="inputDiastolicBP" name="DiastolicBP" min="45" max="150" step="1" value="80" required>
+            </div>
+          </div>
+
+          <!-- 4. Blood Sugar / Glucose -->
+          <div class="form-group">
+            <div class="field-meta">
+              <label for="inputBS"><i class="fa-solid fa-droplet"></i> Blood Glucose (BS)</label>
+              <div class="field-badges">
+                <span class="unit-badge">mmol/L</span>
+                <span class="ref-badge">Normal: 4.0 – 7.8</span>
+              </div>
+            </div>
+            <div class="input-slider-row">
+              <input type="range" class="slider" id="sliderBS" min="3.0" max="20.0" step="0.1" value="7.5">
+              <input type="number" class="num-input" id="inputBS" name="BS" min="1.0" max="30.0" step="0.1" value="7.5" required>
+            </div>
+          </div>
+
+          <!-- 5. Body Temperature -->
+          <div class="form-group">
+            <div class="field-meta">
+              <label for="inputBodyTemp"><i class="fa-solid fa-temperature-half"></i> Body Temperature</label>
+              <div class="field-badges">
+                <span class="unit-badge">°F</span>
+                <span class="ref-badge">Normal: 97.5 – 99.0</span>
+              </div>
+            </div>
+            <div class="input-slider-row">
+              <input type="range" class="slider" id="sliderBodyTemp" min="96.0" max="104.0" step="0.1" value="98.0">
+              <input type="number" class="num-input" id="inputBodyTemp" name="BodyTemp" min="94.0" max="106.0" step="0.1" value="98.0" required>
+            </div>
+          </div>
+
+          <!-- 6. Heart Rate -->
+          <div class="form-group">
+            <div class="field-meta">
+              <label for="inputHeartRate"><i class="fa-solid fa-wave-square"></i> Resting Heart Rate</label>
+              <div class="field-badges">
+                <span class="unit-badge">bpm</span>
+                <span class="ref-badge">Normal: 60 – 100</span>
+              </div>
+            </div>
+            <div class="input-slider-row">
+              <input type="range" class="slider" id="sliderHeartRate" min="40" max="130" step="1" value="76">
+              <input type="number" class="num-input" id="inputHeartRate" name="HeartRate" min="40" max="160" step="1" value="76" required>
+            </div>
+          </div>
+
+          <!-- Submit CTA Button -->
+          <div class="form-actions">
+            <button type="submit" id="submitPredictBtn" class="btn btn-primary-cta">
+              <span class="btn-text"><i class="fa-solid fa-wand-magic-sparkles"></i> Assess Maternal Risk Level</span>
+              <span class="spinner-loader" style="display: none;"><i class="fa-solid fa-circle-notch fa-spin"></i> Processing...</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: Risk Assessment Output & Insights -->
+      <section class="card result-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon"><i class="fa-solid fa-square-poll-vertical"></i></div>
+            <div>
+              <h2>Risk Assessment & Stratification</h2>
+              <p class="card-subtitle">Real-time inference via Random Forest Classifier</p>
+            </div>
+          </div>
+          <span id="assessmentTimestamp" class="timestamp-pill">Live Ready</span>
+        </div>
+
+        <!-- Initial Placeholder State -->
+        <div id="resultInitialState" class="result-placeholder">
+          <div class="placeholder-graphic">
+            <i class="fa-solid fa-heart-pulse"></i>
+          </div>
+          <h3>Ready for Clinical Assessment</h3>
+          <p>Adjust the patient biomarker values on the left or click one of the quick presets to compute predicted risk levels and class probabilities.</p>
+          <div class="quick-start-chips">
+            <span><i class="fa-solid fa-check"></i> 100 Trees Ensemble</span>
+            <span><i class="fa-solid fa-check"></i> Stratified Validation</span>
+            <span><i class="fa-solid fa-check"></i> Multi-class Inference</span>
+          </div>
+        </div>
+
+        <!-- Active Result State (Shown after prediction) -->
+        <div id="resultActiveState" class="result-active-view" style="display: none;">
+          
+          <!-- Large Risk Hero Card -->
+          <div id="riskHeroCard" class="risk-hero-card risk-low">
+            <div class="risk-hero-icon" id="riskHeroIcon">
+              <i class="fa-solid fa-shield-heart"></i>
+            </div>
+            <div class="risk-hero-body">
+              <span class="risk-hero-status" id="riskStatusPill">OPTIMAL BASELINE</span>
+              <h3 class="risk-hero-title" id="riskTitle">Low Risk Level</h3>
+              <p class="risk-hero-desc" id="riskDesc">Measurements fall within normal dataset ranges.</p>
+            </div>
+            <div class="risk-hero-metric">
+              <span class="metric-caption">Confidence</span>
+              <span class="metric-val" id="topConfidenceVal">88.4%</span>
+            </div>
+          </div>
+
+          <!-- Probability Breakdown -->
+          <div class="confidence-section">
+            <h4 class="section-title"><i class="fa-solid fa-chart-pie"></i> Class Confidence Distribution</h4>
+            <div class="prob-bars-container">
+              
+              <!-- Low Risk Bar -->
+              <div class="prob-row" id="rowLowRisk">
+                <div class="prob-meta">
+                  <span class="prob-name"><i class="fa-solid fa-circle-check"></i> Low Risk</span>
+                  <span class="prob-pct" id="pctLowRisk">0.0%</span>
+                </div>
+                <div class="prob-track">
+                  <div class="prob-fill fill-low" id="fillLowRisk" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- Mid Risk Bar -->
+              <div class="prob-row" id="rowMidRisk">
+                <div class="prob-meta">
+                  <span class="prob-name"><i class="fa-solid fa-triangle-exclamation"></i> Mid Risk</span>
+                  <span class="prob-pct" id="pctMidRisk">0.0%</span>
+                </div>
+                <div class="prob-track">
+                  <div class="prob-fill fill-mid" id="fillMidRisk" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- High Risk Bar -->
+              <div class="prob-row" id="rowHighRisk">
+                <div class="prob-meta">
+                  <span class="prob-name"><i class="fa-solid fa-circle-radiation"></i> High Risk</span>
+                  <span class="prob-pct" id="pctHighRisk">0.0%</span>
+                </div>
+                <div class="prob-track">
+                  <div class="prob-fill fill-high" id="fillHighRisk" style="width: 0%;"></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Clinical Flags & Insights -->
+          <div class="clinical-flags-section">
+            <h4 class="section-title"><i class="fa-solid fa-notes-medical"></i> Clinical Observations & Flags</h4>
+            <div id="flagsContainer" class="flags-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Dataset Educational Disclaimer -->
+          <div class="disclaimer-note">
+            <i class="fa-solid fa-circle-info"></i>
+            <span><strong>Educational Demonstration:</strong> Predictions are generated from machine learning patterns in the UCI dataset. This is an academic classification project and not a clinical diagnostic system.</span>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Performance Measures & Confusion Matrix Modal (Single Entry Point) -->
+  <div id="perfModal" class="modal-overlay">
+    <div class="modal-container">
+      
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon"><i class="fa-solid fa-chart-line"></i></div>
+          <div>
+            <h3>Model Performance Measures & Diagnostics</h3>
+            <p>Evaluation on 203 Stratified Test Records • Confusion Matrices & Comprehensive Metrics</p>
+          </div>
+        </div>
+        <button type="button" id="closePerfModalBtn" class="btn-close-modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Model Switcher Tabs -->
+      <div class="modal-tabs">
+        <button type="button" class="tab-btn active" data-tab="Random Forest">
+          <i class="fa-solid fa-tree"></i> Random Forest (Selected)
+        </button>
+        <button type="button" class="tab-btn" data-tab="Decision Tree">
+          <i class="fa-solid fa-sitemap"></i> Decision Tree
+        </button>
+        <button type="button" class="tab-btn" data-tab="Logistic Regression">
+          <i class="fa-solid fa-chart-simple"></i> Logistic Regression
+        </button>
+        <button type="button" class="tab-btn" data-tab="Comparison Table">
+          <i class="fa-solid fa-table-columns"></i> Model Comparison Table
+        </button>
+      </div>
+
+      <!-- Modal Body (Dynamic Tab Content) -->
+      <div class="modal-body" id="modalDynamicBody">
+        <div class="modal-loading">
+          <i class="fa-solid fa-spinner fa-spin"></i> Loading performance benchmarks...
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- App Footer -->
+  <footer class="app-footer">
+    <p>MHRLC Maternal Health Risk Level Classification • Developed for <strong>HDSSBL701</strong> Mini-Project</p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
